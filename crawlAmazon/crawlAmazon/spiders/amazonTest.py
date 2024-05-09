@@ -5,6 +5,8 @@ import re
 
 class AmazontestSpider(scrapy.Spider):
     name = "amazonTest"
+    global requestedPages
+    requestedPages = 1 ## Number of pages
 
     def start_requests(self):
         keyword_list = ['ipad']
@@ -29,11 +31,15 @@ class AmazontestSpider(scrapy.Spider):
                 '//*[contains(@class, "s-pagination-item")][not(has-class("s-pagination-separator"))]/text()'
             ).getall()
 
+        if available_pages < requestedPages:
             last_page = available_pages[-1]
+        else:
+            last_page = requestedPages
+
             for page_num in range(2, int(last_page)):
                 amazon_search_url = f'https://www.amazon.com/s?k={keyword}&page={page_num}'
                 yield scrapy.Request(url=amazon_search_url, callback=self.parse_search_results, meta={'keyword': keyword, 'page': page_num})
-
+        ##Filter for brands here
 
     def parse_product_data(self, response):
         image_data = json.loads(re.findall(r"colorImages':.*'initial':\s*(\[.+?\])},\n", response.text)[0])
@@ -42,13 +48,20 @@ class AmazontestSpider(scrapy.Spider):
         price = response.css('.a-price span[aria-hidden="true"] ::text').get("")
         if not price:
             price = response.css('.a-price .a-offscreen ::text').get("")
+        if response.css('div#a-box#outOfStock ::text').get(""):
+            stock = "Out of stock"
+        else:
+            stock = "In stock"
+
         yield {
             "name": response.css("#productTitle::text").get("").strip(),
             "price": price,
             "stars": response.css("i[data-hook=average-star-rating] ::text").get("").strip(),
             "rating_count": response.css("div[data-hook=total-review-count] ::text").get("").strip(),
+            "brand": response.css('a.a-link-normal::text').get("").strip(),
             "feature_bullets": feature_bullets,
             "images": image_data,
             "variant_data": variant_data,
+            "stock": stock
         }
     
