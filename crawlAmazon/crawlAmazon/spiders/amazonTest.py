@@ -39,10 +39,8 @@ class AmazontestSpider(scrapy.Spider):
             for page_num in range(2, int(last_page)):
                 amazon_search_url = f'https://www.amazon.com/s?k={keyword}&page={page_num}'
                 yield scrapy.Request(url=amazon_search_url, callback=self.parse_search_results, meta={'keyword': keyword, 'page': page_num})
-        ##Filter for brands here
 
     def parse_product_data(self, response):
-        image_data = json.loads(re.findall(r"colorImages':.*'initial':\s*(\[.+?\])},\n", response.text)[0])
         variant_data = re.findall(r'dimensionValuesDisplayData"\s*:\s* ({.+?}),\n', response.text)
         feature_bullets = [bullet.strip() for bullet in response.css("#feature-bullets li ::text").getall()]
         price = response.css('.a-price span[aria-hidden="true"] ::text').get("")
@@ -60,7 +58,6 @@ class AmazontestSpider(scrapy.Spider):
             "rating_count": response.css("div[data-hook=total-review-count] ::text").get("").strip(),
             "brand": response.css('a.a-link-normal::text').get("").strip(),
             "feature_bullets": feature_bullets,
-            "images": image_data,
             "variant_data": variant_data,
             "stock": stock
         }
