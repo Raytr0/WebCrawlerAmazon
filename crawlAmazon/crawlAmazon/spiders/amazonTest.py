@@ -2,14 +2,20 @@ import json
 import scrapy
 from urllib.parse import urljoin
 import re
-
+# data from excel
+import xlwings as xw
+ 
+# Specifying a sheet
+ws = xw.Book("Book2.xlsx").sheets['Sheet1']
 class AmazontestSpider(scrapy.Spider):
     name = "amazonTest"
     global requestedPages
-    requestedPages = 1 ## Number of pages
+    requestedPages = ws.range("B3").value ## Number of pages
+    global inOut
+    inOut = ws.range("B6").value
 
     def start_requests(self):
-        keyword_list = ['ipad']
+        keyword_list = [ws.range("B2").value]
         for keyword in keyword_list:
             amazon_search_url = f'https://www.amazon.com/s?k={keyword}&page=1'
             yield scrapy.Request(url=amazon_search_url, callback=self.discover_product_urls, meta={'keyword': keyword, 'page': 1})
@@ -46,10 +52,17 @@ class AmazontestSpider(scrapy.Spider):
         price = response.css('.a-price span[aria-hidden="true"] ::text').get("")
         if not price:
             price = response.css('.a-price .a-offscreen ::text').get("")
-        if response.css('div#a-box#outOfStock ::text').get(""):
-            stock = "Out of stock"
+        
+        if inOut == 1:
+            if response.css('div#a-box#outOfStock ::text').get(""):
+                stock = "Out of stock"
+            else:
+                stock = "In stock"
         else:
-            stock = "In stock"
+            if response.css('div#a-box#outOfStock ::text').get(""):
+                yield
+
+        
 
         yield {
             "name": response.css("#productTitle::text").get("").strip(),
