@@ -13,7 +13,8 @@ class AmazontestSpider(scrapy.Spider):
     requestedPages = ws.range("B3").value ## Number of pages
     global inOut
     inOut = ws.range("B6").value
-
+    global excludeBrands
+    excludeBrands = [ws.range("B8").value]
     def start_requests(self):
         keyword_list = [ws.range("B2").value]
         for keyword in keyword_list:
@@ -53,6 +54,11 @@ class AmazontestSpider(scrapy.Spider):
         if not price:
             price = response.css('.a-price .a-offscreen ::text').get("")
         
+        for i in range(len(excludeBrands)):
+            if excludeBrands[i] == response.css('a.a-link-normal::text').get("").strip():
+                yield
+            else:
+                brand = response.css('a.a-link-normal::text').get("").strip()
         if inOut == 1:
             if response.css('div#a-box#outOfStock ::text').get(""):
                 stock = "Out of stock"
@@ -69,7 +75,7 @@ class AmazontestSpider(scrapy.Spider):
             "price": price,
             "stars": response.css("i[data-hook=average-star-rating] ::text").get("").strip(),
             "rating_count": response.css("div[data-hook=total-review-count] ::text").get("").strip(),
-            "brand": response.css('a.a-link-normal::text').get("").strip(),
+            "brand": brand,
             "feature_bullets": feature_bullets,
             "variant_data": variant_data,
             "stock": stock
